@@ -1,0 +1,240 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: cosmos
+  labels:
+    app: grafana
+    component: dashboards
+data:
+  # System Overview Dashboard
+  system-overview.json: |
+    {
+      "title": "System Overview",
+      "uid": "system-overview",
+      "refresh": "30s",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "timerange",
+            "type": "interval",
+            "query": "1m,5m,10m,30m,1h,6h,12h,1d",
+            "current": {"selected": true, "text": "6h", "value": "6h"}
+          },
+          {
+            "name": "datacenter",
+            "type": "query",
+            "datasource": "Prometheus",
+            "query": "label_values(node_uname_info, datacenter)"
+          },
+          {
+            "name": "node",
+            "type": "query",
+            "datasource": "Prometheus",
+            "query": "label_values(node_uname_info{datacenter=~\"$datacenter\"}, node)"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "API Request Rate",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total[5m])) by (service)",
+              "legendFormat": "{{service}}"
+            }
+          ],
+          "thresholds": [
+            {"value": 1000, "colorMode": "warning"},
+            {"value": 2000, "colorMode": "critical"}
+          ]
+        },
+        {
+          "title": "System Load",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(node_load1) / count(node_cpu_seconds_total{mode=\"idle\"})",
+              "legendFormat": "Load Average"
+            }
+          ]
+        }
+      ]
+    }
+
+  # GPU Metrics Dashboard
+  gpu-metrics.json: |
+    {
+      "title": "GPU Performance",
+      "uid": "gpu-metrics",
+      "refresh": "30s",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "gpu_id",
+            "type": "query",
+            "datasource": "Prometheus",
+            "query": "label_values(nvidia_gpu_utilization_ratio, gpu)"
+          },
+          {
+            "name": "node",
+            "type": "query",
+            "datasource": "Prometheus",
+            "query": "label_values(nvidia_gpu_utilization_ratio, node)"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "GPU Utilization",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "nvidia_gpu_utilization_ratio{gpu=~\"$gpu_id\",node=~\"$node\"}",
+              "legendFormat": "GPU {{gpu}}"
+            }
+          ],
+          "thresholds": [
+            {"value": 80, "colorMode": "warning"},
+            {"value": 95, "colorMode": "critical"}
+          ]
+        },
+        {
+          "title": "GPU Memory Usage",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "nvidia_gpu_memory_used_bytes{gpu=~\"$gpu_id\",node=~\"$node\"} / nvidia_gpu_memory_total_bytes",
+              "legendFormat": "Memory {{gpu}}"
+            }
+          ]
+        }
+      ]
+    }
+
+  # Model Performance Dashboard
+  model-performance.json: |
+    {
+      "title": "Model Performance",
+      "uid": "model-performance",
+      "refresh": "30s",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "model_type",
+            "type": "custom",
+            "query": "diffusion,autoregressive",
+            "current": {"selected": true, "text": "diffusion", "value": "diffusion"}
+          },
+          {
+            "name": "model_size",
+            "type": "custom",
+            "query": "7B,14B,4B,13B",
+            "current": {"selected": true, "text": "7B", "value": "7B"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "Generation Latency",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(model_generation_duration_seconds_bucket{model_type=\"$model_type\",model_size=\"$model_size\"}[5m])) by (le))",
+              "legendFormat": "p95 Latency"
+            }
+          ],
+          "thresholds": [
+            {"value": 600, "colorMode": "critical"}
+          ]
+        },
+        {
+          "title": "Tokenization Speed",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(tokenizer_processing_duration_seconds_sum[5m]) / rate(tokenizer_processing_duration_seconds_count[5m])",
+              "legendFormat": "Avg Duration"
+            }
+          ],
+          "thresholds": [
+            {"value": 0.1, "colorMode": "critical"}
+          ]
+        }
+      ]
+    }
+
+  # Safety Monitoring Dashboard
+  safety-monitoring.json: |
+    {
+      "title": "Safety Monitoring",
+      "uid": "safety-monitoring",
+      "refresh": "30s",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "guard_type",
+            "type": "custom",
+            "query": "pre-guard,post-guard",
+            "current": {"selected": true, "text": "pre-guard", "value": "pre-guard"}
+          },
+          {
+            "name": "severity",
+            "type": "custom",
+            "query": "low,medium,high,critical",
+            "current": {"selected": true, "text": "high", "value": "high"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "Guard Violations",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(guard_violations_total{guard_type=\"$guard_type\",severity=\"$severity\"}[5m])) by (policy)",
+              "legendFormat": "{{policy}}"
+            }
+          ],
+          "thresholds": [
+            {"value": 10, "colorMode": "warning"},
+            {"value": 50, "colorMode": "critical"}
+          ]
+        },
+        {
+          "title": "Face Detection Events",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(face_detection_events_total[5m])) by (action)",
+              "legendFormat": "{{action}}"
+            }
+          ]
+        }
+      ]
+    }
