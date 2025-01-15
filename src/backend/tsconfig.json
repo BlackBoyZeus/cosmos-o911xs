@@ -1,0 +1,67 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "lib": ["ES2022"],
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    
+    // Type Checking
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    
+    // Module Resolution
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@core/*": ["src/core/*"],
+      "@api/*": ["src/api/*"],
+      "@utils/*": ["src/utils/*"],
+      "@config/*": ["src/config/*"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@types/*": ["src/types/*"],
+      "@services/*": ["src/services/*"],
+      "@workers/*": ["src/workers/*"],
+      "@db/*": ["src/db/*"],
+      "@ml/*": ["src/ml/*"],
+      "@gpu/*": ["src/gpu/*"],
+      "@pipeline/*": ["src/pipeline/*"],
+      "@security/*": ["src/security/*"]
+    },
+    
+    // Decorators Support
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    
+    // Emit Configuration
+    "declaration": true,
+    "sourceMap": true,
+    
+    // Interop Configurations
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    // JavaScript Support
+    "allowJs": false,
+    
+    // Type Definitions
+    "types": ["node", "cuda-api"]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__mocks__/*"
+  ]
+}
