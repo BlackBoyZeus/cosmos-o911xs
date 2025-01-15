@@ -1,0 +1,87 @@
+# Kubernetes Deployment for Cosmos WFM Platform Web Interface
+# Version: apps/v1
+# Purpose: Manages web application pods with high availability and zero-downtime updates
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cosmos-web
+  namespace: cosmos
+  labels:
+    app.kubernetes.io/name: cosmos-web
+    app.kubernetes.io/part-of: cosmos-platform
+    app.kubernetes.io/component: frontend
+spec:
+  # High availability with 3 replicas
+  replicas: 3
+  
+  # Pod selector using recommended kubernetes labels
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cosmos-web
+  
+  # Zero-downtime rolling update strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cosmos-web
+        app.kubernetes.io/part-of: cosmos-platform
+        app.kubernetes.io/component: frontend
+    
+    spec:
+      # Security configuration using service account
+      serviceAccountName: cosmos-web-sa
+      
+      # Pod security context for non-root execution
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      
+      containers:
+        - name: web
+          image: cosmos-web:latest
+          imagePullPolicy: Always
+          
+          # Container port configuration
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          
+          # Resource requests and limits for predictable performance
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          
+          # Environment configuration from ConfigMap and Secrets
+          envFrom:
+            - configMapRef:
+                name: cosmos-web-config
+            - secretRef:
+                name: cosmos-web-secrets
+          
+          # Health checking with liveness and readiness probes
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
