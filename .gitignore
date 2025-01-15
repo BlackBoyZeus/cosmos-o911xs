@@ -1,0 +1,134 @@
+*.env
+.env
+.env.*
+src/backend/.env
+src/web/.env
+
+# Dependencies
+node_modules/
+venv/
+.virtualenv/
+
+# Build Outputs
+dist/
+build/
+*.pyc
+__pycache__/
+*.so
+*.o
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ML Model and Data Files
+*.pt
+*.pth
+*.h5
+*.pkl
+*.npy
+*.npz
+*.onnx
+*.tflite
+*.pb
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Docker
+.docker/
+*.dockerignore
+.docker.env
+
+# Security and Credentials
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.credentials.json
+*_key.json
+*.keystore
+*.jks
+
+# Logs and Debug
+*.log
+*.debug
+logs/
+debug/
+*.nvvp
+
+# Cache and Temporary
+.cache/
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Configuration
+*.local.yaml
+*.local.json
+*.local.conf
+config.local.*
+
+# Test and Coverage
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+
+# Backup Files
+*.bak
+*.backup
+*~
+*.old
+*.orig
+
+# System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# CUDA and GPU
+*.nvvp
+*.nsys-rep
+*.qdrep
+*.sqlite
+
+# Documentation Build
+docs/_build/
+_site/
+.jekyll-cache/
+
+# Package Files
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# Profiling
+*.prof
+*.lprof
+*.stats
