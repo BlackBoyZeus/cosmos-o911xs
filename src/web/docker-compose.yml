@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${NODE_ENV:-development}
+    container_name: cosmos-web
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:3000/api/v1}
+      - VITE_API_TIMEOUT=${VITE_API_TIMEOUT:-60000}
+    ports:
+      - "${NODE_ENV:-development}" == "development" && "3000:3000" || "80:80"
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+        read_only: false
+        consistency: cached
+        when: ${NODE_ENV:-development} == development
+      - type: volume
+        source: node_modules
+        target: /app/node_modules
+        when: ${NODE_ENV:-development} == development
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${NODE_ENV:-development}" == "development" && "3000" || "80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - cosmos-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 16384
+
+networks:
+  cosmos-network:
+    driver: bridge
+    name: cosmos-network
+    attachable: true
+    internal: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  node_modules:
+    driver: local
+    name: cosmos-web-node-modules
+    labels:
+      com.cosmos.service: web
+      com.cosmos.environment: ${NODE_ENV:-development}
