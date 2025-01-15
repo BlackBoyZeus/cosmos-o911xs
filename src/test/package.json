@@ -1,0 +1,61 @@
+{
+  "name": "@cosmos/test",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:unit": "jest --testMatch='<rootDir>/unit/**/*.test.ts' --gpu",
+    "test:integration": "jest --testMatch='<rootDir>/integration/**/*.test.ts' --gpu --runInBand",
+    "test:performance": "k6 run performance/**/*.bench.ts --gpu-profile",
+    "test:e2e": "jest --testMatch='<rootDir>/e2e/**/*.test.ts' --gpu --config=e2e.config.ts",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:performance && npm run test:e2e",
+    "test:gpu": "jest --gpu --detectGPUs"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^8.0.0",
+    "@jest/bench": "^29.0.0",
+    "@jest/benchmark": "^29.0.0",
+    "@jest/globals": "^29.0.0",
+    "@jest/types": "^29.0.0",
+    "@nvidia/cuda": "12.0.0",
+    "@nvidia/cuda-mock": "^1.0.0",
+    "@nvidia/cuda-test": "^2.0.0",
+    "@nvidia/cuda-toolkit": "12.0.0",
+    "@testing-library/react": "^13.4.0",
+    "benchmark": "^2.1.4",
+    "bull": "^4.10.0",
+    "crypto": "^1.0.0",
+    "dotenv": "^16.0.0",
+    "ffmpeg-static": "^5.0.0",
+    "http-status-codes": "^2.2.0",
+    "jest": "^29.5.0",
+    "jest-gpu": "^1.0.0",
+    "jest-mock-extended": "^3.0.0",
+    "k6": "^0.44.0",
+    "k6/http": "^0.45.0",
+    "k6/metrics": "^0.45.0",
+    "memwatch-next": "^0.3.0",
+    "mongo": "6.0",
+    "psnr": "^2.0.0",
+    "redis": "7.0-alpine",
+    "simple-statistics": "^7.8.0",
+    "supertest": "^6.3.0",
+    "torch": "2.0.0",
+    "uuid": "^9.0.0",
+    "winston": "^3.8.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.0.0",
+    "ts-jest": "^29.0.5",
+    "typescript": "^4.9.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "gpu": {
+    "required": true,
+    "memory": "16GB",
+    "compute": "8.0"
+  }
+}
