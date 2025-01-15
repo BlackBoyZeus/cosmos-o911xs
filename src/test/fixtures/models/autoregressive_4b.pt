@@ -1,0 +1,84 @@
+import torch  # v2.0.0
+import cuda  # @nvidia/cuda-toolkit v12.0.0
+
+# Pre-trained 4B parameter autoregressive World Foundation Model (WFM) fixture
+# Used for testing video generation capabilities, hardware compatibility, and performance metrics
+
+# Model architecture configuration
+model_config = {
+    "architecture": {
+        "type": "AUTOREGRESSIVE",
+        "parameters": 4_000_000_000,  # 4B parameters
+        "variant": "base"
+    },
+    "capabilities": {
+        "max_resolution": {
+            "width": 1280,
+            "height": 720
+        },
+        "max_frames": 57,
+        "max_batch_size": 1
+    },
+    "performance_baselines": {
+        "generation_time": 62000,  # ~62s for 57 frames
+        "gpu_memory": 31.3,  # GB
+        "psnr": 28.17,
+        "throughput": 0.92  # frames/second
+    }
+}
+
+# Hardware compatibility matrix
+hardware_compatibility = {
+    "H100": {
+        "compatible": True,
+        "min_gpu_memory": 28.5,  # GB
+        "generation_time": 45000  # ~45s
+    },
+    "A100": {
+        "compatible": True,
+        "min_gpu_memory": 31.3,  # GB
+        "generation_time": 62000  # ~62s
+    },
+    "V100": {
+        "compatible": False,
+        "reason": "Insufficient GPU memory"
+    }
+}
+
+# Model state dictionary containing pre-trained weights
+state_dict = {
+    # Transformer layers
+    "encoder.layers.0.self_attn.q_proj.weight": torch.randn(4096, 4096),
+    "encoder.layers.0.self_attn.k_proj.weight": torch.randn(4096, 4096),
+    "encoder.layers.0.self_attn.v_proj.weight": torch.randn(4096, 4096),
+    "encoder.layers.0.self_attn.out_proj.weight": torch.randn(4096, 4096),
+    "encoder.layers.0.mlp.fc1.weight": torch.randn(16384, 4096),
+    "encoder.layers.0.mlp.fc2.weight": torch.randn(4096, 16384),
+    "encoder.layers.0.norm1.weight": torch.ones(4096),
+    "encoder.layers.0.norm2.weight": torch.ones(4096),
+    
+    # Embedding layers
+    "token_embedding.weight": torch.randn(32000, 4096),
+    "position_embedding.weight": torch.randn(8192, 4096),
+    
+    # Output layers
+    "lm_head.weight": torch.randn(32000, 4096),
+    "layer_norm.weight": torch.ones(4096)
+}
+
+# Performance validation thresholds
+performance_thresholds = {
+    "max_generation_time": 600000,  # 600s max for 57 frames at 720p
+    "min_throughput": 0.92,  # frames/second
+    "min_psnr": 28.17,
+    "max_gpu_memory": 31.3  # GB
+}
+
+# Save model fixture
+torch.save({
+    "model_config": model_config,
+    "state_dict": state_dict,
+    "hardware_compatibility": hardware_compatibility,
+    "performance_thresholds": performance_thresholds,
+    "version": "1.0.0"
+}, "autoregressive_4b.pt")
