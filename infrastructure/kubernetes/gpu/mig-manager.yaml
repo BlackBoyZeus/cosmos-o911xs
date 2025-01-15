@@ -1,0 +1,184 @@
+# NVIDIA MIG Manager v0.5.0
+# Handles GPU partitioning and resource isolation for Cosmos WFM Platform
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-mig-manager
+  namespace: kube-system
+  labels:
+    app: nvidia-mig-manager
+    component: gpu-manager
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-mig-manager
+  template:
+    metadata:
+      labels:
+        app: nvidia-mig-manager
+        component: gpu-manager
+    spec:
+      serviceAccountName: nvidia-mig-manager
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: mig-manager
+        image: nvidia/mig-manager:v0.5.0
+        env:
+        - name: NVIDIA_MIG_MANAGER_PORT
+          value: "8080"
+        - name: NVIDIA_MIG_CONFIG_DEVICES
+          value: "all"
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: GPU_DEVICE_COUNT
+          valueFrom:
+            configMapKeyRef:
+              name: gpu-config
+              key: GPU_DEVICE_COUNT
+        - name: GPU_MEMORY_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: gpu-config
+              key: GPU_MEMORY_LIMIT
+        ports:
+        - name: metrics
+          containerPort: 8080
+        - name: health
+          containerPort: 8081
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+          capabilities:
+            add: ["SYS_ADMIN"]
+          seLinuxOptions:
+            level: "s0"
+            type: "nvidia_container_t"
+            role: "system_r"
+            user: "system_u"
+        volumeMounts:
+        - name: nvidia-mig-config
+          mountPath: /etc/nvidia/mig
+        - name: nvidia-driver
+          mountPath: /usr/local/nvidia
+        - name: host-os-release
+          mountPath: /host-etc/os-release
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: health
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: health
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+      volumes:
+      - name: nvidia-mig-config
+        configMap:
+          name: nvidia-mig-config
+      - name: nvidia-driver
+        hostPath:
+          path: /usr/local/nvidia
+      - name: host-os-release
+        hostPath:
+          path: /etc/os-release
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvidia-mig-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    version: v1
+    mig:
+      strategy: mixed
+      defaultStrategy: single
+      configurationInterval: 30
+      deviceConfigs:
+      - name: all-1g.5gb
+        devices: ["all"]
+        migGeometry:
+          "1g.5gb": 7
+        workloadType: small
+        memoryLimit: "5120Mi"
+      - name: all-2g.10gb
+        devices: ["all"]
+        migGeometry:
+          "2g.10gb": 3
+        workloadType: medium
+        memoryLimit: "10240Mi"
+      - name: all-3g.20gb
+        devices: ["all"]
+        migGeometry:
+          "3g.20gb": 2
+        workloadType: large
+        memoryLimit: "20480Mi"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-mig-manager
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nvidia-mig-manager
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nvidia-mig-manager
+subjects:
+- kind: ServiceAccount
+  name: nvidia-mig-manager
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: nvidia-mig-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvidia-mig-manager
+  namespace: kube-system
+  labels:
+    app: nvidia-mig-manager
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-mig-manager
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 10s
