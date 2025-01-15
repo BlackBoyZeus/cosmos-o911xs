@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cosmos-backend-config
+  namespace: cosmos
+  labels:
+    app: cosmos-backend
+    component: config
+    version: v1
+  annotations:
+    description: Configuration for Cosmos WFM Platform backend service
+    lastUpdated: "2024-01-20"
+data:
+  # Service Configuration
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_VERSION: "v1"
+
+  # Database Configuration
+  DB_TYPE: "mongodb"
+  DB_HOST: "cosmos-db.default.svc.cluster.local"
+  DB_PORT: "27017"
+  DB_NAME: "cosmos"
+  DB_POOL_SIZE: "10"
+  DB_TIMEOUT_MS: "5000"
+
+  # GPU Configuration
+  GPU_DEVICE_COUNT: "8"
+  GPU_MEMORY_LIMIT: "81920"  # Memory limit in MB for H100 GPUs
+  GPU_COMPUTE_CAPABILITY: "8.0"
+  GPU_DRIVER_VERSION: "525.85.12"
+  GPU_RUNTIME_VERSION: "12.0"
+  GPU_SCHEDULER_POLICY: "binpack"
+
+  # Storage Configuration
+  STORAGE_PROVIDER: "aws"
+  STORAGE_REGION: "us-west-2"
+  STORAGE_BUCKET_NAME: "cosmos-data"
+  STORAGE_PATH_PREFIX: "/videos"
+  STORAGE_MAX_UPLOAD_SIZE: "5368709120"  # 5GB in bytes
+  STORAGE_CACHE_CONTROL: "public,max-age=3600"
+
+  # Logging Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  LOG_OUTPUT: "stdout"
+  LOG_INCLUDE_TRACE: "true"
+
+  # Rate Limiting
+  RATE_LIMIT_WINDOW: "15m"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  RATE_LIMIT_STRATEGY: "sliding"
+
+  # Performance Tuning
+  MAX_CONCURRENT_JOBS: "32"
+  JOB_QUEUE_SIZE: "1000"
+  WORKER_THREADS: "16"
+  BATCH_SIZE: "32"
