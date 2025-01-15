@@ -1,0 +1,157 @@
+# NVIDIA GPU Device Plugin v0.14.1
+# Enables GPU support in Kubernetes with enhanced security and monitoring
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-device-plugin-daemonset
+  namespace: kube-system
+  labels:
+    app: nvidia-device-plugin
+    component: gpu-manager
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-device-plugin
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: nvidia-device-plugin
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+    spec:
+      serviceAccountName: nvidia-device-plugin
+      priorityClassName: system-node-critical
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+      - name: nvidia-device-plugin-ctr
+        image: nvidia/k8s-device-plugin:v0.14.1
+        env:
+        - name: NVIDIA_DRIVER_ROOT
+          value: "/var/lib/nvidia-driver"
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: NVIDIA_MIG_CONFIG_DEVICES
+          value: "all"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "compute,utility,video"
+        - name: NVIDIA_REQUIRE_CUDA
+          value: "cuda>=12.0"
+        securityContext:
+          privileged: true
+          seLinuxOptions:
+            level: "s0"
+            type: "nvidia_container_t"
+          seccompProfile:
+            type: "RuntimeDefault"
+          capabilities:
+            add: ["SYS_ADMIN"]
+        volumeMounts:
+        - name: device-plugin
+          mountPath: /var/lib/kubelet/device-plugins
+        - name: nvidia-driver
+          mountPath: /var/lib/nvidia-driver
+          readOnly: true
+        ports:
+        - name: metrics
+          containerPort: 9400
+        - name: healthz
+          containerPort: 9401
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: healthz
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: healthz
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 50m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 200Mi
+      volumes:
+      - name: device-plugin
+        hostPath:
+          path: /var/lib/kubelet/device-plugins
+      - name: nvidia-driver
+        hostPath:
+          path: /var/lib/nvidia-driver
+      hostNetwork: false
+      nodeSelector:
+        accelerator: nvidia
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-device-plugin
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nvidia-device-plugin
+subjects:
+- kind: ServiceAccount
+  name: nvidia-device-plugin
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: system:node-proxier
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvidia-device-plugin-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    version: v1
+    flags:
+      failOnInitError: true
+      migStrategy: "mixed"
+      deviceListStrategy: "envvar"
+      deviceIDStrategy: "uuid"
+      nvidiaDriverRoot: "/var/lib/nvidia-driver"
+      containerDriverRoot: "/usr/local/nvidia"
+    sharing:
+      timeSlicing:
+        enabled: true
+        resources:
+          - name: nvidia.com/gpu
+            replicas: 2
+    resourceConfig:
+      timeoutSeconds: 30
+      sleepIntervalSeconds: 5
+      maxReconnectAttempts: 3
+      maxDevices: 64
+      resourceMapping:
+        nvidia.com/gpu: "GPU"
+        nvidia.com/mig-1g.5gb: "MIG_1G.5GB"
+        nvidia.com/mig-2g.10gb: "MIG_2G.10GB"
+    monitoring:
+      metrics:
+        port: 9400
+        path: "/metrics"
+      healthProbe:
+        port: 9401
+        path: "/health"
