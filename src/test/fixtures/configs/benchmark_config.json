@@ -1,0 +1,126 @@
+{
+  "modelBenchmarks": {
+    "autoregressive": {
+      "models": ["4B", "12B"],
+      "resolutions": ["720p", "1080p"],
+      "batchSizes": [1, 4, 8],
+      "targetLatencyMs": 120000,
+      "gpuMemoryThresholdGB": 32,
+      "psnrThreshold": 28.0,
+      "qualityMetrics": {
+        "4B": {
+          "psnr": 28.17,
+          "ssim": 0.92,
+          "fvd": 125.3
+        },
+        "12B": {
+          "psnr": 27.51,
+          "ssim": 0.91,
+          "fvd": 118.7
+        }
+      }
+    },
+    "diffusion": {
+      "models": ["7B", "14B"], 
+      "resolutions": ["720p", "1080p"],
+      "batchSizes": [1, 2, 4],
+      "targetLatencyMs": 600000,
+      "gpuMemoryThresholdGB": 74,
+      "psnrThreshold": 30.0,
+      "qualityMetrics": {
+        "7B": {
+          "psnr": 32.8,
+          "ssim": 0.95,
+          "fvd": 98.4
+        },
+        "14B": {
+          "psnr": 30.61,
+          "ssim": 0.94,
+          "fvd": 92.1
+        }
+      }
+    }
+  },
+  "tokenizerBenchmarks": {
+    "continuous": {
+      "variants": ["CV8x8x8", "CV4x8x8"],
+      "compressionRatios": [512, 256],
+      "resolutions": ["720p", "1080p"],
+      "targetLatencyMs": 100,
+      "psnrThresholds": {
+        "CV8x8x8": 32.8,
+        "CV4x8x8": 35.45
+      },
+      "throughputTargets": {
+        "720p": {
+          "framesPerSecond": 25,
+          "batchSize": 16
+        },
+        "1080p": {
+          "framesPerSecond": 15,
+          "batchSize": 8
+        }
+      }
+    },
+    "discrete": {
+      "variants": ["DV8x16x16", "DV4x8x8"],
+      "compressionRatios": [2048, 256],
+      "resolutions": ["720p", "1080p"],
+      "targetLatencyMs": 100,
+      "psnrThresholds": {
+        "DV8x16x16": 28.81,
+        "DV4x8x8": 31.97
+      },
+      "throughputTargets": {
+        "720p": {
+          "framesPerSecond": 20,
+          "batchSize": 16
+        },
+        "1080p": {
+          "framesPerSecond": 12,
+          "batchSize": 8
+        }
+      }
+    }
+  },
+  "performanceTargets": {
+    "generationLatency": {
+      "720p": 600000,
+      "1080p": 900000
+    },
+    "tokenizationLatency": {
+      "720p": 80,
+      "1080p": 100
+    },
+    "gpuMemoryUsage": {
+      "4B": 32,
+      "7B": 74,
+      "12B": 48,
+      "14B": 71
+    },
+    "throughput": {
+      "videosPerDay": 100000,
+      "concurrentJobs": {
+        "training": 4,
+        "inference": 16
+      },
+      "resourceUtilization": {
+        "gpuTarget": 0.85,
+        "memoryTarget": 0.8,
+        "networkTarget": 0.7
+      }
+    },
+    "scalability": {
+      "linearScalingThreshold": 0.85,
+      "maxBatchSize": {
+        "training": 32,
+        "inference": 16
+      },
+      "distributedTraining": {
+        "minGpus": 4,
+        "maxGpus": 32,
+        "networkBandwidth": "100Gbps"
+      }
+    }
+  }
+}
