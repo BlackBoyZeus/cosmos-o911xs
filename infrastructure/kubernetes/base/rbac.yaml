@@ -1,0 +1,140 @@
+# Kubernetes RBAC configuration for Cosmos WFM Platform
+# Version: kubernetes v1.24+
+
+---
+# Backend Role - Full access for model training and inference operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cosmos-backend-role
+  labels:
+    app.kubernetes.io/name: cosmos-backend
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: cosmos-wfm
+  annotations:
+    description: "Role for backend API services with GPU workload access"
+    owner: "platform-team@cosmos.ai"
+    security.cosmos.ai/last-reviewed: "2024-01-15"
+    security.cosmos.ai/review-frequency: "90d"
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "services", "configmaps", "secrets", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["nvidia.com"]
+  resources: ["gpus", "migs"]
+  verbs: ["get", "list", "watch", "create", "update"]
+- apiGroups: ["scheduling.k8s.io"]
+  resources: ["priorityclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list", "watch"]
+
+---
+# Web Role - Read-only access for frontend operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cosmos-web-role
+  labels:
+    app.kubernetes.io/name: cosmos-web
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: cosmos-wfm
+  annotations:
+    description: "Read-only role for web frontend components"
+    owner: "platform-team@cosmos.ai"
+    security.cosmos.ai/last-reviewed: "2024-01-15"
+    security.cosmos.ai/review-frequency: "90d"
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+---
+# Monitoring Role - Access to metrics and logs
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cosmos-monitoring-role
+  labels:
+    app.kubernetes.io/name: cosmos-monitoring
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: cosmos-wfm
+  annotations:
+    description: "Role for monitoring and observability components"
+    owner: "platform-team@cosmos.ai"
+    security.cosmos.ai/last-reviewed: "2024-01-15"
+    security.cosmos.ai/review-frequency: "90d"
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "nodes", "services", "endpoints", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["nvidia.com"]
+  resources: ["gpus", "migs"]
+  verbs: ["get", "list", "watch"]
+
+---
+# Backend Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cosmos-backend-binding
+  labels:
+    app.kubernetes.io/name: cosmos-backend
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: cosmos-wfm
+subjects:
+- kind: ServiceAccount
+  name: cosmos-backend-sa
+  namespace: cosmos-backend
+roleRef:
+  kind: ClusterRole
+  name: cosmos-backend-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Web Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cosmos-web-binding
+  labels:
+    app.kubernetes.io/name: cosmos-web
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: cosmos-wfm
+subjects:
+- kind: ServiceAccount
+  name: cosmos-web-sa
+  namespace: cosmos-web
+roleRef:
+  kind: ClusterRole
+  name: cosmos-web-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Monitoring Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cosmos-monitoring-binding
+  labels:
+    app.kubernetes.io/name: cosmos-monitoring
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: cosmos-wfm
+subjects:
+- kind: ServiceAccount
+  name: cosmos-monitoring-sa
+  namespace: cosmos-monitoring
+roleRef:
+  kind: ClusterRole
+  name: cosmos-monitoring-role
+  apiGroup: rbac.authorization.k8s.io
