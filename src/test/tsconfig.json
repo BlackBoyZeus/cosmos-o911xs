@@ -1,0 +1,65 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "moduleResolution": "NodeNext",
+    "rootDir": ".",
+    "outDir": "../dist/test",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowJs": false,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@test/*": [
+        "./*"
+      ],
+      "@fixtures/*": [
+        "./fixtures/*"
+      ],
+      "@utils/*": [
+        "./utils/*"
+      ],
+      "@performance/*": [
+        "./performance/*"
+      ],
+      "@/*": [
+        "../src/*"
+      ]
+    },
+    "types": [
+      "node",
+      "jest",
+      "benchmark"
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.test.ts", 
+    "**/*.bench.ts",
+    "**/*.load.ts",
+    "**/*.perf.ts",
+    "**/*.e2e.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "../dist",
+    "coverage",
+    "temp"
+  ]
+}
