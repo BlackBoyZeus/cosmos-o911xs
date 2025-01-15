@@ -1,0 +1,226 @@
+# Grafana Deployment Configuration for Cosmos WFM Platform
+# Version: grafana 9.5.0
+# Purpose: Enhanced monitoring and visualization platform with security controls
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: cosmos-monitoring
+  labels:
+    app: grafana
+    component: monitoring
+    part-of: cosmos-wfm
+data:
+  grafana.ini: |
+    [server]
+    protocol = http
+    http_port = 3000
+    domain = grafana.cosmos-wfm.local
+    root_url = %(protocol)s://%(domain)s/
+    serve_from_sub_path = true
+    
+    [security]
+    admin_user = ${GRAFANA_ADMIN_USER}
+    admin_password = ${GRAFANA_ADMIN_PASSWORD}
+    secret_key = ${GRAFANA_SECRET_KEY}
+    cookie_secure = true
+    cookie_samesite = strict
+    disable_gravatar = true
+    strict_transport_security = true
+    allow_embedding = false
+    
+    [auth]
+    disable_login_form = false
+    disable_signout_menu = false
+    oauth_auto_login = false
+    login_maximum_inactive_lifetime_duration = 7d
+    login_maximum_lifetime_duration = 30d
+    
+    [users]
+    allow_sign_up = false
+    auto_assign_org = true
+    auto_assign_org_role = Viewer
+    default_theme = dark
+    viewers_can_edit = false
+    
+    [dashboards]
+    default_home_dashboard_path = /etc/grafana/dashboards/overview.json
+    min_refresh_interval = 10s
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-secrets
+  namespace: cosmos-monitoring
+  labels:
+    app: grafana
+    component: monitoring
+    part-of: cosmos-wfm
+type: Opaque
+data:
+  admin-user: ${GRAFANA_ADMIN_USER}
+  admin-password: ${GRAFANA_ADMIN_PASSWORD}
+  secret-key: ${GRAFANA_SECRET_KEY}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: cosmos-monitoring
+  labels:
+    app: grafana
+    component: monitoring
+    part-of: cosmos-wfm
+spec:
+  replicas: ${GRAFANA_REPLICAS}
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        component: monitoring
+        part-of: cosmos-wfm
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472
+        fsGroup: 472
+      containers:
+      - name: grafana
+        image: grafana/grafana:9.5.0
+        ports:
+        - name: http-grafana
+          containerPort: 3000
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${GRAFANA_CPU_LIMIT}
+            memory: ${GRAFANA_MEMORY_LIMIT}
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/grafana/grafana.ini
+          subPath: grafana.ini
+        - name: storage
+          mountPath: /var/lib/grafana
+        - name: dashboards
+          mountPath: /etc/grafana/dashboards
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secrets
+              key: admin-user
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secrets
+              key: admin-password
+        - name: GF_SECURITY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secrets
+              key: secret-key
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60
+          timeoutSeconds: 30
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+      volumes:
+      - name: config
+        configMap:
+          name: grafana-config
+      - name: storage
+        persistentVolumeClaim:
+          claimName: grafana-storage
+      - name: dashboards
+        configMap:
+          name: dashboard_definitions
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: cosmos-monitoring
+  labels:
+    app: grafana
+    component: monitoring
+    part-of: cosmos-wfm
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http-grafana
+  selector:
+    app: grafana
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage
+  namespace: cosmos-monitoring
+  labels:
+    app: grafana
+    component: monitoring
+    part-of: cosmos-wfm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: ${GRAFANA_STORAGE_SIZE}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: grafana-network-policy
+  namespace: cosmos-monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: grafana
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: cosmos-monitoring
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: cosmos-monitoring
+    ports:
+    - protocol: TCP
+      port: 9090 # Prometheus
