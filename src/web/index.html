@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Character encoding and viewport configuration -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- Primary meta tags -->
+    <meta name="theme-color" content="#0284c7">
+    <meta name="description" content="Cosmos World Foundation Model Platform - Advanced synthetic data generation system for Physical AI applications">
+    
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Cosmos WFM Platform">
+    <meta property="og:description" content="Enterprise-grade synthetic data generation platform for Physical AI development">
+    <meta property="og:type" content="website">
+    
+    <!-- Security headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; script-src 'self'">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+    
+    <!-- Title -->
+    <title>Cosmos WFM Platform</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/src/assets/icons/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/src/assets/icons/apple-touch-icon.png">
+    
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Critical CSS -->
+    <link rel="stylesheet" href="/src/assets/styles/global.css">
+    
+    <!-- Font loading with FOIT prevention -->
+    <link 
+        rel="stylesheet" 
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
+        media="print" 
+        onload="this.media='all'"
+    >
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/assets/styles/global.css" as="style">
+    <link rel="preload" href="/src/index.tsx" as="script">
+</head>
+<body>
+    <!-- React mount point with accessibility support -->
+    <div 
+        id="root" 
+        role="main" 
+        aria-label="Cosmos WFM Platform Application"
+    ></div>
+    
+    <!-- Noscript fallback -->
+    <noscript>
+        <div class="noscript-message">
+            You need to enable JavaScript to run this application.
+        </div>
+    </noscript>
+    
+    <!-- Application entry point -->
+    <script type="module" src="/src/index.tsx" defer></script>
+</body>
+</html>
