@@ -1,0 +1,177 @@
+version: "3.9"
+
+services:
+  backend-test:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: development
+    image: cosmos-wfm/backend-test:1.0.0
+    container_name: cosmos-wfm-backend-test
+    environment:
+      - NODE_ENV=test
+      - PORT=3001
+      - DB_HOST=mongodb-test
+      - REDIS_HOST=redis-test
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ../backend:/app:ro
+      - backend_node_modules:/app/node_modules
+    ports:
+      - "3001:3001"
+    depends_on:
+      mongodb-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+          nvidia.com/gpu: 1
+        reservations:
+          cpus: "1"
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    runtime: nvidia
+    networks:
+      - cosmos-test-network
+
+  web-test:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      target: development
+    image: cosmos-wfm/web-test:1.0.0
+    container_name: cosmos-wfm-web-test
+    environment:
+      - NODE_ENV=test
+      - VITE_API_URL=http://backend-test:3001
+      - VITE_DEBUG_PORT=9229
+    volumes:
+      - ../web:/app:ro
+      - web_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+      - "9229:9229"
+    depends_on:
+      backend-test:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    networks:
+      - cosmos-test-network
+
+  mongodb-test:
+    image: mongo:6.0
+    container_name: cosmos-wfm-mongodb-test
+    environment:
+      - MONGO_INITDB_DATABASE=cosmos_wfm_test
+      - MONGO_INITDB_ROOT_USERNAME=test_user
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongodb_password
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_test_data:/data/db:rw
+      - mongodb_test_config:/data/configdb:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - cosmos-test-network
+    secrets:
+      - mongodb_password
+
+  redis-test:
+    image: redis:7.0-alpine
+    container_name: cosmos-wfm-redis-test
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data:rw
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - cosmos-test-network
+
+volumes:
+  mongodb_test_data:
+    name: cosmos-wfm-mongodb-test-data
+  mongodb_test_config:
+    name: cosmos-wfm-mongodb-test-config
+  redis_test_data:
+    name: cosmos-wfm-redis-test-data
+  backend_node_modules:
+    name: cosmos-wfm-backend-test-modules
+  web_node_modules:
+    name: cosmos-wfm-web-test-modules
+
+networks:
+  cosmos-test-network:
+    name: cosmos-wfm-test-network
+    driver: bridge
+    driver_opts:
+      encrypted: "true"
+    attachable: true
+    internal: true
+
+secrets:
+  mongodb_password:
+    file: ./.secrets/mongodb_password.txt
