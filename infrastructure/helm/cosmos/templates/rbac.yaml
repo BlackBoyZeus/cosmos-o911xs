@@ -1,0 +1,158 @@
+# Kubernetes RBAC configuration for Cosmos World Foundation Model Platform
+# Version: 1.0.0
+# Kubernetes version: 1.24+
+
+{{/* Generate ClusterRole for backend components */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+  annotations:
+    description: "Backend service permissions for model serving and GPU workloads"
+    security.cosmos.ai/audit: "enabled"
+    rbac.cosmos.ai/last-reviewed: {{ now | date "2006-01-02" | quote }}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "delete"]
+- apiGroups: ["nvidia.com"]
+  resources: ["gpus"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors", "prometheusrules"]
+  verbs: ["get", "list", "watch"]
+---
+{{/* Generate ClusterRole for web components */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cosmos.fullname" . }}-web
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  annotations:
+    description: "Web frontend read-only permissions"
+    security.cosmos.ai/audit: "enabled"
+    rbac.cosmos.ai/last-reviewed: {{ now | date "2006-01-02" | quote }}
+rules:
+- apiGroups: [""]
+  resources: ["services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors"]
+  verbs: ["get", "list", "watch"]
+---
+{{/* Generate ClusterRole for monitoring components */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cosmos.fullname" . }}-monitoring
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+  annotations:
+    description: "Monitoring service permissions for metrics collection"
+    security.cosmos.ai/audit: "enabled"
+    rbac.cosmos.ai/last-reviewed: {{ now | date "2006-01-02" | quote }}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get"]
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors", "prometheusrules", "podmonitors"]
+  verbs: ["get", "list", "watch", "create", "update"]
+---
+{{/* Generate ClusterRoleBinding for backend */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+subjects:
+- kind: ServiceAccount
+  name: {{ include "cosmos.serviceAccountName" . }}-backend
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "cosmos.fullname" . }}-backend
+  apiGroup: rbac.authorization.k8s.io
+---
+{{/* Generate ClusterRoleBinding for web */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cosmos.fullname" . }}-web
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+subjects:
+- kind: ServiceAccount
+  name: {{ include "cosmos.serviceAccountName" . }}-web
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "cosmos.fullname" . }}-web
+  apiGroup: rbac.authorization.k8s.io
+---
+{{/* Generate ClusterRoleBinding for monitoring */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cosmos.fullname" . }}-monitoring
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+subjects:
+- kind: ServiceAccount
+  name: {{ include "cosmos.serviceAccountName" . }}-monitoring
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "cosmos.fullname" . }}-monitoring
+  apiGroup: rbac.authorization.k8s.io
+---
+{{/* Generate namespace-scoped Role for additional backend permissions */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend-extra
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+rules:
+- apiGroups: [""]
+  resources: ["pods/log", "pods/exec"]
+  verbs: ["get", "list", "create"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create", "patch"]
+---
+{{/* Generate RoleBinding for additional backend permissions */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend-extra
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+subjects:
+- kind: ServiceAccount
+  name: {{ include "cosmos.serviceAccountName" . }}-backend
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "cosmos.fullname" . }}-backend-extra
+  apiGroup: rbac.authorization.k8s.io
