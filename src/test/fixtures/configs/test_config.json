@@ -1,0 +1,103 @@
+{
+  "TEST_TIMEOUT_MS": 300000,
+  "TEST_RETRY_COUNT": 3,
+
+  "modelTests": {
+    "autoregressive": {
+      "modelPath": "../../fixtures/models/autoregressive_4b.pt",
+      "inputVideos": [
+        "../../fixtures/videos/sample_720p.mp4",
+        "../../fixtures/videos/sample_1080p.mp4"
+      ],
+      "batchSizes": [1, 2],
+      "metrics": {
+        "psnr": 28.0,
+        "ssim": 0.85,
+        "fvd": 250.0
+      }
+    },
+    "diffusion": {
+      "modelPath": "../../fixtures/models/diffusion_7b.pt", 
+      "inputVideos": [
+        "../../fixtures/videos/sample_720p.mp4",
+        "../../fixtures/videos/sample_1080p.mp4"
+      ],
+      "batchSizes": [1],
+      "metrics": {
+        "psnr": 30.0,
+        "ssim": 0.88,
+        "fvd": 220.0
+      }
+    }
+  },
+
+  "tokenizerTests": {
+    "continuous": {
+      "variants": ["CV8x8x8", "CV4x8x8"],
+      "inputVideos": [
+        "../../fixtures/videos/sample_720p.mp4",
+        "../../fixtures/videos/sample_1080p.mp4"
+      ],
+      "metrics": {
+        "CV8x8x8": {
+          "psnr": 32.8,
+          "compressionRatio": 512
+        },
+        "CV4x8x8": {
+          "psnr": 35.45,
+          "compressionRatio": 256
+        }
+      }
+    },
+    "discrete": {
+      "variants": ["DV8x16x16", "DV4x8x8"],
+      "inputVideos": [
+        "../../fixtures/videos/sample_720p.mp4",
+        "../../fixtures/videos/sample_1080p.mp4"
+      ],
+      "metrics": {
+        "DV8x16x16": {
+          "psnr": 28.81,
+          "compressionRatio": 2048
+        },
+        "DV4x8x8": {
+          "psnr": 31.97,
+          "compressionRatio": 256
+        }
+      }
+    }
+  },
+
+  "safetyTests": {
+    "preGuard": {
+      "testCases": [
+        "harmful_content",
+        "unsafe_scenes", 
+        "inappropriate_actions"
+      ],
+      "expectedResults": "blocked"
+    },
+    "postGuard": {
+      "testCases": [
+        "face_detection",
+        "content_filtering",
+        "safety_verification"  
+      ],
+      "expectedResults": "filtered"
+    }
+  },
+
+  "integrationTests": {
+    "pipeline": {
+      "inputDataset": "../../fixtures/datasets/training_samples.json",
+      "validationDataset": "../../fixtures/datasets/validation_samples.json",
+      "stages": [
+        "curation",
+        "tokenization", 
+        "training",
+        "generation"
+      ],
+      "timeoutMs": 3600000
+    }
+  }
+}
