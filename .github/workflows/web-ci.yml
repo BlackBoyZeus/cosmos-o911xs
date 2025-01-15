@@ -1,0 +1,131 @@
+name: Web CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/web/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/web/**'
+  workflow_dispatch:
+  security_events:
+
+env:
+  NODE_VERSION: '16.x'
+  WORKING_DIR: src/web
+
+jobs:
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@v0.4.0
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --severity-threshold=high
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript"
+
+  build:
+    name: Build and Test
+    needs: security-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.WORKING_DIR }}/.next/cache
+            ${{ env.WORKING_DIR }}/node_modules/.cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]sx?', '**.[cm]js') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install dependencies
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: Type check
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run type-check
+
+      - name: Lint
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run lint
+        
+      - name: Run tests
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm test
+        env:
+          CI: true
+
+      - name: Build
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run build
+        env:
+          CI: true
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: ${{ env.WORKING_DIR }}/.next
+          retention-days: 7
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
