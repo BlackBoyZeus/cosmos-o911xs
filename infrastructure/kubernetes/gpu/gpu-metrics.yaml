@@ -1,0 +1,125 @@
+---
+# DaemonSet for NVIDIA DCGM Exporter
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dcgm-exporter
+  namespace: kube-system
+  labels:
+    app: dcgm-exporter
+    component: monitoring
+    part-of: cosmos-wfm
+spec:
+  selector:
+    matchLabels:
+      app: dcgm-exporter
+  template:
+    metadata:
+      labels:
+        app: dcgm-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9400"
+    spec:
+      containers:
+      - name: dcgm-exporter
+        image: nvidia/dcgm-exporter:3.1.7
+        securityContext:
+          runAsNonRoot: false
+          allowPrivilegeEscalation: true
+          privileged: true
+        args:
+        - --collectors=utilization,memory,performance,processes,nvlink,xid,mig
+        - --interval=15s
+        ports:
+        - name: metrics
+          containerPort: 9400
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9400
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9400
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        volumeMounts:
+        - name: pod-gpu-resources
+          mountPath: /var/lib/kubelet/pod-resources
+        - name: device-metrics
+          mountPath: /run/prometheus
+      volumes:
+      - name: pod-gpu-resources
+        hostPath:
+          path: /var/lib/kubelet/pod-resources
+      - name: device-metrics
+        emptyDir: {}
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      hostNetwork: true
+      nodeSelector:
+        nvidia.com/gpu: "present"
+
+---
+# Service to expose DCGM Exporter metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: dcgm-exporter-service
+  namespace: kube-system
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9400"
+  labels:
+    app: dcgm-exporter
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 9400
+    targetPort: 9400
+    protocol: TCP
+  selector:
+    app: dcgm-exporter
+
+---
+# ServiceMonitor for Prometheus Operator integration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dcgm-exporter-monitor
+  namespace: kube-system
+  labels:
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app: dcgm-exporter
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    relabelings:
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
+    - sourceLabels: [__meta_kubernetes_namespace]
+      action: replace
+      targetLabel: kubernetes_namespace
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      action: replace
+      targetLabel: kubernetes_pod_name
+  namespaceSelector:
+    matchNames:
+    - kube-system
