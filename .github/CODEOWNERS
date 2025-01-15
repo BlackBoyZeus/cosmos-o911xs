@@ -1,0 +1,69 @@
+* @cosmos-admins
+
+# Backend and ML infrastructure
+src/backend/** @backend-team @ml-team
+
+# ML model implementations (diffusion and autoregressive)
+src/backend/src/core/models/** @ml-team
+# Security review required for model changes
+src/backend/src/core/models/** @security-team
+
+# Safety systems (pre-guard and post-guard)
+src/backend/src/core/safety/** @safety-team @ml-team
+# Security review required for safety components
+src/backend/src/core/safety/** @security-team
+
+# Tokenizer implementations
+src/backend/src/core/tokenizers/** @ml-team
+# Performance review required for core components
+src/backend/src/core/tokenizers/** @performance-team
+
+# Web frontend components
+src/web/** @frontend-team
+
+# Infrastructure configurations
+infrastructure/** @devops-team
+
+# CI/CD workflows
+.github/workflows/** @devops-team
+
+# Test suites
+src/test/** @qa-team
+
+# Performance review required for all core backend components
+src/backend/src/core/** @performance-team
+
+# Documentation
+docs/** @cosmos-admins @ml-team
+
+# Security configurations
+.github/security/** @security-team
+config/security/** @security-team
+
+# Database schemas and migrations
+src/backend/src/db/** @backend-team @devops-team
+
+# API specifications
+src/backend/api/** @backend-team @ml-team
+
+# Monitoring and observability
+src/monitoring/** @devops-team @backend-team
+
+# GPU and distributed training configs
+src/backend/src/core/distributed/** @ml-team @performance-team
+
+# Data pipeline components
+src/backend/src/core/pipeline/** @ml-team @backend-team
+
+# Environment configurations
+.env* @devops-team @cosmos-admins
+config/*.yaml @devops-team @cosmos-admins
+
+# Dependencies and package management
+package.json @devops-team @backend-team
+requirements.txt @devops-team @backend-team
+poetry.lock @devops-team @backend-team
+
+# Build configurations
+Dockerfile* @devops-team
+docker-compose*.yml @devops-team
