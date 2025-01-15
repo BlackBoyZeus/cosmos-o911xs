@@ -1,0 +1,97 @@
+{
+  "datasets": [
+    {
+      "id": "train_720p",
+      "name": "Training Dataset 720p",
+      "description": "Sample training dataset with 720p resolution videos for pipeline validation",
+      "version": "1.0.0",
+      "size": 1024,
+      "videoCount": 2,
+      "resolution": {
+        "width": 1280,
+        "height": 720,
+        "frameRate": 30,
+        "codec": "h264"
+      },
+      "metrics": {
+        "psnr": 32.8,
+        "ssim": 0.88,
+        "fid": 220.0,
+        "fvd": 250.0,
+        "processingLatency": 85,
+        "compressionRatio": 512
+      },
+      "status": "COMPLETED",
+      "storageLocation": "s3://cosmos-wfm-test/datasets/train_720p",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "validationStatus": {
+        "fileExists": true,
+        "isReadable": true,
+        "hasValidFormat": true,
+        "meetsQualityThresholds": true
+      },
+      "processingMetadata": {
+        "inputPath": "fixtures/videos/sample_720p.mp4",
+        "outputPath": "fixtures/processed/train_720p",
+        "processingDuration": 145.2,
+        "tokenizationLatency": 32.5,
+        "modelInferenceLatency": 112.7
+      }
+    },
+    {
+      "id": "train_1080p", 
+      "name": "Training Dataset 1080p",
+      "description": "Sample training dataset with 1080p resolution videos for high-quality processing",
+      "version": "1.0.0",
+      "size": 2048,
+      "videoCount": 2,
+      "resolution": {
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 30,
+        "codec": "h264"
+      },
+      "metrics": {
+        "psnr": 35.45,
+        "ssim": 0.90,
+        "fid": 200.0,
+        "fvd": 220.0,
+        "processingLatency": 98,
+        "compressionRatio": 256
+      },
+      "status": "COMPLETED",
+      "storageLocation": "s3://cosmos-wfm-test/datasets/train_1080p",
+      "createdAt": "2024-01-01T00:00:00.000Z", 
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "validationStatus": {
+        "fileExists": true,
+        "isReadable": true,
+        "hasValidFormat": true,
+        "meetsQualityThresholds": true
+      },
+      "processingMetadata": {
+        "inputPath": "fixtures/videos/sample_1080p.mp4",
+        "outputPath": "fixtures/processed/train_1080p",
+        "processingDuration": 178.3,
+        "tokenizationLatency": 45.8,
+        "modelInferenceLatency": 132.5
+      }
+    }
+  ],
+  "metadata": {
+    "totalDatasets": 2,
+    "totalVideos": 4,
+    "averageMetrics": {
+      "psnr": 34.13,
+      "ssim": 0.89,
+      "fid": 210.0,
+      "fvd": 235.0,
+      "processingLatency": 91.5,
+      "compressionRatio": 384
+    },
+    "generatedAt": "2024-01-01T00:00:00.000Z",
+    "version": "1.0.0",
+    "environment": "test"
+  }
+}
