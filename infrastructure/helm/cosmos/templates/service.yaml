@@ -1,0 +1,75 @@
+{{- /*
+Service template for Cosmos World Foundation Model Platform
+Defines internal ClusterIP services for backend model operations and web interface
+Version: 1.0.0
+*/}}
+
+{{- /* Backend Service */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    service: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.backend.service.port | default 8000 }}
+      targetPort: {{ .Values.backend.service.targetPort | default 8000 }}
+      protocol: TCP
+      name: http
+    - port: {{ .Values.backend.service.metricsPort | default 9090 }}
+      targetPort: {{ .Values.backend.service.metricsPort | default 9090 }}
+      protocol: TCP
+      name: metrics
+    {{- if .Values.backend.service.grpcPort }}
+    - port: {{ .Values.backend.service.grpcPort }}
+      targetPort: {{ .Values.backend.service.grpcPort }}
+      protocol: TCP
+      name: grpc
+    {{- end }}
+  selector:
+    {{- include "cosmos.selectorLabels" . | nindent 4 }}
+    component: backend
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+  internalTrafficPolicy: Cluster
+
+---
+{{- /* Web Interface Service */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cosmos.fullname" . }}-web
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    service: web
+  annotations:
+    service.beta.kubernetes.io/load-balancer-source-ranges: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.web.service.port | default 80 }}
+      targetPort: {{ .Values.web.service.targetPort | default 80 }}
+      protocol: TCP
+      name: http
+    {{- if .Values.web.service.httpsPort }}
+    - port: {{ .Values.web.service.httpsPort | default 443 }}
+      targetPort: {{ .Values.web.service.httpsPort | default 443 }}
+      protocol: TCP
+      name: https
+    {{- end }}
+    {{- if .Values.web.service.metricsPort }}
+    - port: {{ .Values.web.service.metricsPort }}
+      targetPort: {{ .Values.web.service.metricsPort }}
+      protocol: TCP
+      name: metrics
+    {{- end }}
+  selector:
+    {{- include "cosmos.selectorLabels" . | nindent 4 }}
+    component: web
+  sessionAffinity: None
+  internalTrafficPolicy: Cluster
