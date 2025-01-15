@@ -1,0 +1,153 @@
+# Cosmos World Foundation Model Platform ConfigMap Template
+# Version: 1.0.0
+# Provides configuration management for cloud, hybrid, and on-premises deployments
+
+{{/* Generate backend service configuration ConfigMap */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend-config
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    config-type: backend
+data:
+  # GPU Configuration
+  gpu.config: |
+    computeMode: {{ .Values.backend.gpu.computeMode | default "DEFAULT" }}
+    memoryLimit: {{ .Values.backend.gpu.memoryLimit | default "16Gi" }}
+    migEnabled: {{ .Values.backend.gpu.migEnabled | default false }}
+    migProfile: {{ .Values.backend.gpu.migProfile | default "1g.5gb" }}
+    devicePlugin: nvidia
+    driverVersion: {{ .Values.backend.gpu.driverVersion | default "535.104.05" }}
+
+  # Resource Management Configuration
+  resources.config: |
+    limits:
+      cpu: {{ .Values.backend.resources.limits.cpu | default "8" }}
+      memory: {{ .Values.backend.resources.limits.memory | default "32Gi" }}
+      storage: {{ .Values.backend.resources.limits.storage | default "100Gi" }}
+    requests:
+      cpu: {{ .Values.backend.resources.requests.cpu | default "4" }}
+      memory: {{ .Values.backend.resources.requests.memory | default "16Gi" }}
+      storage: {{ .Values.backend.resources.requests.storage | default "50Gi" }}
+    autoscaling:
+      enabled: {{ .Values.backend.autoscaling.enabled | default true }}
+      minReplicas: {{ .Values.backend.autoscaling.minReplicas | default 1 }}
+      maxReplicas: {{ .Values.backend.autoscaling.maxReplicas | default 10 }}
+      targetCPUUtilization: {{ .Values.backend.autoscaling.targetCPUUtilization | default 80 }}
+      targetMemoryUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilization | default 80 }}
+
+  # Security Configuration
+  security.config: |
+    networkPolicy:
+      enabled: {{ .Values.backend.security.networkPolicy.enabled | default true }}
+      ingressRules:
+        - from:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/component: web
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/component: api
+    securityContext:
+      {{- include "cosmos.securityContext" . | nindent 6 }}
+    rbac:
+      serviceAccount:
+        create: true
+        annotations:
+          eks.amazonaws.com/role-arn: {{ .Values.backend.security.roleArn | default "" }}
+
+---
+{{/* Generate web interface configuration ConfigMap */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cosmos.fullname" . }}-web-config
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    config-type: web
+data:
+  # Web UI Configuration
+  ui.config: |
+    theme: {{ .Values.web.ui.theme | default "light" }}
+    customization:
+      logo: {{ .Values.web.ui.customization.logo | default "" }}
+      colors:
+        primary: {{ .Values.web.ui.customization.colors.primary | default "#1a73e8" }}
+        secondary: {{ .Values.web.ui.customization.colors.secondary | default "#202124" }}
+    features:
+      modelViewer: {{ .Values.web.ui.features.modelViewer | default true }}
+      datasetManager: {{ .Values.web.ui.features.datasetManager | default true }}
+      monitoring: {{ .Values.web.ui.features.monitoring | default true }}
+
+  # Resource Configuration
+  resources.config: |
+    limits:
+      cpu: {{ .Values.web.resources.limits.cpu | default "2" }}
+      memory: {{ .Values.web.resources.limits.memory | default "4Gi" }}
+    requests:
+      cpu: {{ .Values.web.resources.requests.cpu | default "500m" }}
+      memory: {{ .Values.web.resources.requests.memory | default "1Gi" }}
+
+---
+{{/* Generate monitoring configuration ConfigMap */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cosmos.fullname" . }}-monitoring-config
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    config-type: monitoring
+data:
+  # Prometheus Configuration
+  prometheus.config: |
+    scrapeInterval: {{ .Values.monitoring.prometheus.scrapeInterval | default "15s" }}
+    evaluationInterval: {{ .Values.monitoring.prometheus.evaluationInterval | default "15s" }}
+    retentionPeriod: {{ .Values.monitoring.prometheus.retentionPeriod | default "15d" }}
+    targets:
+      - job: cosmos-backend
+        static_configs:
+          - targets: ['localhost:9090']
+      - job: cosmos-web
+        static_configs:
+          - targets: ['localhost:9091']
+
+  # Grafana Configuration
+  grafana.config: |
+    auth:
+      enabled: true
+      provider: {{ .Values.monitoring.grafana.auth.provider | default "oauth" }}
+    dashboards:
+      - name: "Cosmos Overview"
+        file: dashboards/overview.json
+      - name: "Model Performance"
+        file: dashboards/model-performance.json
+      - name: "Resource Usage"
+        file: dashboards/resource-usage.json
+
+  # Alert Manager Configuration
+  alertmanager.config: |
+    receivers:
+      - name: platform-team
+        email_configs:
+          - to: {{ .Values.monitoring.alertmanager.email | default "platform-team@example.com" }}
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: platform-team
+
+  # Audit Logging Configuration
+  audit.config: |
+    enabled: {{ .Values.monitoring.audit.enabled | default true }}
+    logLevel: {{ .Values.monitoring.audit.logLevel | default "INFO" }}
+    retention:
+      days: {{ .Values.monitoring.audit.retention.days | default 30 }}
+    events:
+      - category: security
+        enabled: true
+      - category: model-operations
+        enabled: true
+      - category: data-access
+        enabled: true
