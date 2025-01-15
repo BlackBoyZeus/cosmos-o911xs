@@ -1,0 +1,48 @@
+{
+  "validationDataset": [
+    {
+      "id": "val_720p",
+      "name": "Validation Dataset 720p",
+      "description": "Sample validation dataset with 720p resolution videos",
+      "version": "1.0.0",
+      "size": 512,
+      "videoCount": 1,
+      "resolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "metrics": {
+        "psnr": 31.97,
+        "ssim": 0.85,
+        "fid": 225.0,
+        "fvd": 255.0
+      },
+      "status": "COMPLETED",
+      "storageLocation": "fixtures/videos/sample_720p.mp4",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "val_1080p", 
+      "name": "Validation Dataset 1080p",
+      "description": "Sample validation dataset with 1080p resolution videos",
+      "version": "1.0.0",
+      "size": 1024,
+      "videoCount": 1,
+      "resolution": {
+        "width": 1920,
+        "height": 1080
+      },
+      "metrics": {
+        "psnr": 34.8,
+        "ssim": 0.88,
+        "fid": 210.0,
+        "fvd": 230.0
+      },
+      "status": "COMPLETED",
+      "storageLocation": "fixtures/videos/sample_1080p.mp4", 
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
