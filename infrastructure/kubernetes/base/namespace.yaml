@@ -1,0 +1,80 @@
+# Kubernetes namespace configuration for Cosmos World Foundation Model platform
+# Version: kubernetes v1.24+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cosmos-backend
+  labels:
+    app.kubernetes.io/name: cosmos-backend
+    app.kubernetes.io/component: backend-services
+    app.kubernetes.io/part-of: cosmos-wfm
+    app.kubernetes.io/managed-by: kustomize
+    security.cosmos.ai/classification: restricted
+    compliance.cosmos.ai/requirements: pci-dss,hipaa
+    cost-center.cosmos.ai/team: ml-platform
+    environment.cosmos.ai/type: production
+  annotations:
+    description: "Secure namespace for Cosmos WFM backend services and GPU workloads"
+    owner: "platform-team@cosmos.ai"
+    security.cosmos.ai/review-required: "true"
+    security.cosmos.ai/last-review: "2024-01-15"
+    monitoring.cosmos.ai/grafana-dashboard: "cosmos-backend-monitoring"
+    backup.cosmos.ai/retention: "30d"
+    network-policy.cosmos.ai/type: "restricted"
+    resource-quota.cosmos.ai/profile: "high-compute"
+spec:
+  finalizers:
+    - kubernetes
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cosmos-web
+  labels:
+    app.kubernetes.io/name: cosmos-web
+    app.kubernetes.io/component: frontend-services
+    app.kubernetes.io/part-of: cosmos-wfm
+    app.kubernetes.io/managed-by: kustomize
+    security.cosmos.ai/classification: public
+    compliance.cosmos.ai/requirements: gdpr
+    cost-center.cosmos.ai/team: web-frontend
+    environment.cosmos.ai/type: production
+  annotations:
+    description: "Isolated namespace for Cosmos WFM web frontend components"
+    owner: "frontend-team@cosmos.ai"
+    security.cosmos.ai/review-required: "true"
+    security.cosmos.ai/last-review: "2024-01-15"
+    monitoring.cosmos.ai/grafana-dashboard: "cosmos-web-monitoring"
+    backup.cosmos.ai/retention: "7d"
+    network-policy.cosmos.ai/type: "web-tier"
+    resource-quota.cosmos.ai/profile: "standard"
+spec:
+  finalizers:
+    - kubernetes
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cosmos-monitoring
+  labels:
+    app.kubernetes.io/name: cosmos-monitoring
+    app.kubernetes.io/component: monitoring-services
+    app.kubernetes.io/part-of: cosmos-wfm
+    app.kubernetes.io/managed-by: kustomize
+    security.cosmos.ai/classification: internal
+    compliance.cosmos.ai/requirements: soc2
+    cost-center.cosmos.ai/team: platform-ops
+    environment.cosmos.ai/type: production
+  annotations:
+    description: "Dedicated namespace for Cosmos WFM monitoring and observability tools"
+    owner: "ops-team@cosmos.ai"
+    security.cosmos.ai/review-required: "true"
+    security.cosmos.ai/last-review: "2024-01-15"
+    monitoring.cosmos.ai/grafana-dashboard: "cosmos-monitoring-dashboard"
+    backup.cosmos.ai/retention: "14d"
+    network-policy.cosmos.ai/type: "monitoring"
+    resource-quota.cosmos.ai/profile: "monitoring"
+spec:
+  finalizers:
+    - kubernetes
