@@ -1,0 +1,46 @@
+# Kubernetes Service configuration for Cosmos WFM Platform backend
+# Version: v1.27+
+# Purpose: Defines service networking for backend API and model serving components
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cosmos-backend-service
+  namespace: cosmos-wfm
+  labels:
+    app: cosmos-backend
+    component: api
+    part-of: cosmos-platform
+    environment: production
+  annotations:
+    # Prometheus monitoring configuration
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+    # Service monitoring configuration
+    service.beta.kubernetes.io/monitor: "true"
+    service.beta.kubernetes.io/metrics-port: "3000"
+
+spec:
+  # Using ClusterIP for internal service discovery and security
+  type: ClusterIP
+  
+  # Port configuration for backend API
+  ports:
+    - port: 80  # Service port
+      targetPort: 3000  # Container port
+      protocol: TCP
+      name: http-api
+  
+  # Pod selector for service routing
+  selector:
+    app: cosmos-backend
+  
+  # Session handling configuration
+  sessionAffinity: None
+  
+  # Pod readiness configuration
+  publishNotReadyAddresses: false
+  
+  # Internal traffic policy
+  internalTrafficPolicy: Cluster
