@@ -1,0 +1,136 @@
+{{/* Backend HPA */}}
+{{- if .Values.backend.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "cosmos.fullname" . }}-backend
+  minReplicas: {{ .Values.backend.autoscaling.minReplicas | default 1 }}
+  maxReplicas: {{ .Values.backend.autoscaling.maxReplicas | default 10 }}
+  metrics:
+    {{- if .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.backend.autoscaling.enableGPUMetrics }}
+    - type: External
+      external:
+        metric:
+          name: nvidia_gpu_utilization
+          selector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+        target:
+          type: AverageValue
+          averageValue: {{ .Values.backend.autoscaling.targetGPUUtilization | default 80 }}
+    {{- end }}
+    {{- if .Values.backend.autoscaling.enableQueueMetrics }}
+    - type: External
+      external:
+        metric:
+          name: cosmos_queue_length
+          selector:
+            matchLabels:
+              queue: inference
+        target:
+          type: AverageValue
+          averageValue: {{ .Values.backend.autoscaling.targetQueueLength | default 100 }}
+    {{- end }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.backend.autoscaling.scaleUpStabilizationWindow | default 300 }}
+      policies:
+      - type: Pods
+        value: {{ .Values.backend.autoscaling.scaleUpPodLimit | default 4 }}
+        periodSeconds: 60
+      - type: Percent
+        value: {{ .Values.backend.autoscaling.scaleUpPercentLimit | default 100 }}
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.backend.autoscaling.scaleDownStabilizationWindow | default 300 }}
+      policies:
+      - type: Pods
+        value: {{ .Values.backend.autoscaling.scaleDownPodLimit | default 2 }}
+        periodSeconds: 60
+      - type: Percent
+        value: {{ .Values.backend.autoscaling.scaleDownPercentLimit | default 50 }}
+        periodSeconds: 60
+      selectPolicy: Min
+---
+{{- end }}
+
+{{/* Web HPA */}}
+{{- if .Values.web.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "cosmos.fullname" . }}-web
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "cosmos.fullname" . }}-web
+  minReplicas: {{ .Values.web.autoscaling.minReplicas | default 2 }}
+  maxReplicas: {{ .Values.web.autoscaling.maxReplicas | default 10 }}
+  metrics:
+    {{- if .Values.web.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.web.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.web.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.web.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.web.autoscaling.scaleUpStabilizationWindow | default 60 }}
+      policies:
+      - type: Pods
+        value: {{ .Values.web.autoscaling.scaleUpPodLimit | default 4 }}
+        periodSeconds: 60
+      - type: Percent
+        value: {{ .Values.web.autoscaling.scaleUpPercentLimit | default 100 }}
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.web.autoscaling.scaleDownStabilizationWindow | default 300 }}
+      policies:
+      - type: Pods
+        value: {{ .Values.web.autoscaling.scaleDownPodLimit | default 1 }}
+        periodSeconds: 60
+      - type: Percent
+        value: {{ .Values.web.autoscaling.scaleDownPercentLimit | default 25 }}
+        periodSeconds: 60
+      selectPolicy: Min
+{{- end }}
