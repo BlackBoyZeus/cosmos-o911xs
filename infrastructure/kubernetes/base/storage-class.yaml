@@ -1,0 +1,96 @@
+# Kubernetes version: 1.24+
+# Purpose: Storage class definitions for Cosmos World Foundation Model platform
+# Supports: AWS EBS, GCP PD, Azure Disk via CSI drivers
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cosmos-fast-storage
+  labels:
+    app.kubernetes.io/name: cosmos-fast-storage
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: cosmos-wfm
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+spec:
+  # Dynamic provisioner selection based on cloud provider
+  provisioner: ${STORAGE_PROVISIONER} # ebs.csi.aws.com | pd.csi.storage.gke.io | disk.csi.azure.com
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: true
+  reclaimPolicy: Retain
+  parameters:
+    # AWS EBS parameters
+    type: gp3
+    iopsPerGB: "3000"
+    throughputMode: "provisioned"
+    encrypted: "true"
+    fsType: "ext4"
+    # GCP specific overrides
+    # type: pd-ssd
+    # replication-type: none
+    # Azure specific overrides
+    # skuName: Premium_LRS
+    # cachingMode: ReadWrite
+  mountOptions:
+    - noatime
+    - nodiratime
+    - discard
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cosmos-standard-storage
+  labels:
+    app.kubernetes.io/name: cosmos-standard-storage
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: cosmos-wfm
+spec:
+  provisioner: ${STORAGE_PROVISIONER}
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: true
+  reclaimPolicy: Delete
+  parameters:
+    # AWS EBS parameters
+    type: gp2
+    encrypted: "true"
+    fsType: "ext4"
+    # GCP specific overrides
+    # type: pd-standard
+    # replication-type: none
+    # Azure specific overrides
+    # skuName: StandardSSD_LRS
+    # cachingMode: ReadOnly
+  mountOptions:
+    - noatime
+    - nodiratime
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cosmos-archive-storage
+  labels:
+    app.kubernetes.io/name: cosmos-archive-storage
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: cosmos-wfm
+spec:
+  provisioner: ${STORAGE_PROVISIONER}
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: true
+  reclaimPolicy: Retain
+  parameters:
+    # AWS EBS parameters
+    type: sc1
+    encrypted: "true"
+    fsType: "ext4"
+    # GCP specific overrides
+    # type: pd-standard
+    # replication-type: regional-pd
+    # Azure specific overrides
+    # skuName: Standard_LRS
+    # cachingMode: None
+  mountOptions:
+    - noatime
+    - nodiratime
