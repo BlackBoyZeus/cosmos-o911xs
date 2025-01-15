@@ -1,0 +1,37 @@
+[Binary video file content with the following specifications]
+
+# Technical Metadata (embedded in container)
+Resolution: 1920x1080
+Format: MP4 (MPEG-4 Part 14)
+Video Codec: H.264/AVC
+Frame Rate: 30 fps
+Duration: 57 seconds
+Bitrate: 8000 kbps
+Color Space: YUV420p
+Audio Codec: AAC
+Audio Channels: 2
+Audio Sample Rate: 48000 Hz
+
+# Test Pattern Content
+- Color bars pattern for color accuracy testing
+- Moving geometric shapes for motion tracking
+- Resolution test patterns
+- Grayscale gradient for bit depth validation
+- Dynamic range test sequences
+- Motion blur test sequences
+- Frame counter overlay
+- Timecode burn-in
+- Color space reference charts
+- Audio reference tones
+
+# Embedded Metadata Tags
+title=Sample 1080p Test Video
+encoder=ffmpeg v5.0.0
+creation_time=2024-01-01T00:00:00.000Z
+handler_name=VideoHandler
+major_brand=isom
+minor_version=512
+compatible_brands=isomiso2avc1mp41
+encoder=Lavf58.76.100
+
+[Binary video data continues...]
