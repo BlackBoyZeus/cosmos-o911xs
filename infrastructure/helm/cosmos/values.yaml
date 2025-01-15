@@ -1,0 +1,149 @@
+# Default values for Cosmos World Foundation Model Platform
+# This is a YAML-formatted file.
+
+# External Dependencies:
+# - prometheus-community/prometheus:15.0.0
+# - grafana/grafana:6.0.0
+# - nvidia/gpu-operator:2.0.0
+
+# Global configurations applied across all components
+global:
+  environment: production
+  imageRegistry: cosmos.azurecr.io
+  imagePullSecrets:
+    - registry-credentials
+  storageClass:
+    aws: gp3
+    gcp: premium-rwo
+    azure: managed-premium
+  networkPolicy:
+    enabled: true
+    allowedNamespaces:
+      - monitoring
+      - ingress-nginx
+
+# Backend service configuration
+backend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: cosmos-backend
+    tag: latest
+    pullPolicy: Always
+  
+  resources:
+    requests:
+      cpu: "8"
+      memory: 32Gi
+      nvidia.com/gpu: "1"
+    limits:
+      cpu: "16"
+      memory: 64Gi
+      nvidia.com/gpu: "1"
+  
+  gpu:
+    enabled: true
+    types:
+      - nvidia-tesla-a100
+      - nvidia-tesla-h100
+    count: 1
+    mig:
+      enabled: true
+      strategy: mixed
+      profiles:
+        - 1g.10gb
+        - 2g.20gb
+        - 3g.40gb
+    monitoring:
+      dcgm: true
+      metrics:
+        - utilization
+        - memory
+        - temperature
+        - power
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    targetGPUUtilizationPercentage: 85
+    scaleDownStabilizationWindowSeconds: 300
+  
+  nodeSelector:
+    gpu: "true"
+    topology.kubernetes.io/zone: us-east-1a
+    cloud.google.com/gke-accelerator: nvidia-tesla-a100
+  
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname
+
+# Monitoring configuration
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: "15s"
+      scrapeTimeout: "10s"
+    rules:
+      gpu:
+        utilization: 90
+        memory: 85
+        temperature: 85
+  
+  grafana:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: managed-premium
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      defaultFolders:
+        - GPU
+        - Training
+        - Inference
+    alerting:
+      enabled: true
+      rules:
+        gpu_utilization: "expr: gpu_utilization > 90"
+        memory_usage: "expr: container_memory_usage_bytes > 90"
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: managed-premium
+  size: 5Ti
+  accessMode: ReadWriteMany
+  backup:
+    enabled: true
+    schedule: "0 0 * * *"
+    retention: 720h
+
+# Security configuration
+security:
+  rbac:
+    create: true
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "services"]
+        verbs: ["get", "list", "watch"]
+  
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 2000
+  
+  networkPolicies:
+    enabled: true
+    ingressRules:
+      - from:
+          - "namespace: monitoring"
+        ports:
+          - 9090
+          - 9100
