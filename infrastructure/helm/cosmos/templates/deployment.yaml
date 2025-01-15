@@ -1,0 +1,243 @@
+{{/* Generate secure Kubernetes deployments for Cosmos WFM Platform */}}
+
+{{/* Backend ML Service Deployment */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cosmos.fullname" . }}-backend
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.backend.metricsPort | default 9090 }}"
+    {{- include "cosmos.gpuAnnotations" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas | default 1 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      {{- include "cosmos.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "cosmos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "cosmos.serviceAccountName" . }}
+      securityContext:
+        {{- include "cosmos.securityContext" . | nindent 8 }}
+      containers:
+      - name: backend
+        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy | default "IfNotPresent" }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: {{ .Values.backend.port | default 8080 }}
+          protocol: TCP
+        - name: metrics
+          containerPort: {{ .Values.backend.metricsPort | default 9090 }}
+          protocol: TCP
+        resources:
+          requests:
+            cpu: {{ .Values.backend.resources.requests.cpu | default "2" }}
+            memory: {{ .Values.backend.resources.requests.memory | default "8Gi" }}
+            {{- if .Values.gpu.enabled }}
+            nvidia.com/gpu: {{ .Values.gpu.count | default 1 }}
+            {{- end }}
+          limits:
+            cpu: {{ .Values.backend.resources.limits.cpu | default "4" }}
+            memory: {{ .Values.backend.resources.limits.memory | default "16Gi" }}
+            {{- if .Values.gpu.enabled }}
+            nvidia.com/gpu: {{ .Values.gpu.count | default 1 }}
+            {{- end }}
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+          readOnly: true
+        - name: data
+          mountPath: /app/data
+        - name: cache
+          mountPath: /app/cache
+        env:
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: {{ if .Values.gpu.enabled }}all{{ else }}none{{ end }}
+        - name: MODEL_PATH
+          value: /app/models
+        - name: DATA_PATH
+          value: /app/data
+        - name: CACHE_PATH
+          value: /app/cache
+        {{- range .Values.backend.env }}
+        - name: {{ .name }}
+          valueFrom:
+            {{- toYaml .valueFrom | nindent 12 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: {{ include "cosmos.modelVolumeName" . }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "cosmos.dataVolumeName" . }}
+      - name: cache
+        persistentVolumeClaim:
+          claimName: {{ include "cosmos.cacheVolumeName" . }}
+      nodeSelector:
+        {{- if .Values.gpu.enabled }}
+        nvidia.com/gpu: "true"
+        {{- end }}
+        {{- with .Values.backend.nodeSelector }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: kubernetes.io/hostname
+        {{- with .Values.backend.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      tolerations:
+        {{- if .Values.gpu.enabled }}
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+        {{- end }}
+        {{- with .Values.backend.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+---
+{{/* Web Interface Deployment */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cosmos.fullname" . }}-web
+  labels:
+    {{- include "cosmos.labels" . | nindent 4 }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.web.metricsPort | default 9090 }}"
+spec:
+  replicas: {{ .Values.web.replicas | default 2 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      {{- include "cosmos.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "cosmos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "cosmos.serviceAccountName" . }}
+      securityContext:
+        {{- include "cosmos.securityContext" . | nindent 8 }}
+      containers:
+      - name: web
+        image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+        imagePullPolicy: {{ .Values.web.image.pullPolicy | default "IfNotPresent" }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: {{ .Values.web.port | default 80 }}
+          protocol: TCP
+        - name: metrics
+          containerPort: {{ .Values.web.metricsPort | default 9090 }}
+          protocol: TCP
+        resources:
+          requests:
+            cpu: {{ .Values.web.resources.requests.cpu | default "500m" }}
+            memory: {{ .Values.web.resources.requests.memory | default "512Mi" }}
+          limits:
+            cpu: {{ .Values.web.resources.limits.cpu | default "1" }}
+            memory: {{ .Values.web.resources.limits.memory | default "1Gi" }}
+        env:
+        - name: BACKEND_URL
+          value: http://{{ include "cosmos.fullname" . }}-backend:{{ .Values.backend.port | default 8080 }}
+        {{- range .Values.web.env }}
+        - name: {{ .name }}
+          valueFrom:
+            {{- toYaml .valueFrom | nindent 12 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - web
+              topologyKey: kubernetes.io/hostname
+        {{- with .Values.web.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.web.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
