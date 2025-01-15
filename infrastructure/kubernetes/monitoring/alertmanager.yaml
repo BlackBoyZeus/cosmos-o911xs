@@ -1,0 +1,185 @@
+# Alertmanager v0.25.0
+# Handles alert routing, grouping and notifications for Cosmos WFM platform
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: cosmos-alertmanager
+  namespace: cosmos-monitoring
+  labels:
+    app: alertmanager
+    component: monitoring
+    part-of: cosmos-wfm
+spec:
+  replicas: 3
+  version: "0.25.0"
+  retention: "120h"
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi
+  podMetadata:
+    labels:
+      app: alertmanager
+      component: monitoring
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - alertmanager
+      topologyKey: kubernetes.io/hostname
+---
+apiVersion: monitoring.coreos.com/v1
+kind: AlertmanagerConfig
+metadata:
+  name: cosmos-alertmanager-config
+  namespace: cosmos-monitoring
+spec:
+  route:
+    groupBy: ['alertname', 'cluster', 'service', 'severity']
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    receiver: default-receiver
+    routes:
+    # Security Critical Alerts
+    - receiver: security-critical
+      matchers:
+      - name: severity
+        value: critical
+      - name: type
+        value: security
+      groupWait: 0s
+      repeatInterval: 30m
+      continue: true
+
+    # General Critical Alerts
+    - receiver: critical-alerts
+      matchers:
+      - name: severity
+        value: critical
+      groupWait: 0s
+      repeatInterval: 1h
+      continue: true
+
+    # Security Warnings
+    - receiver: security-warnings
+      matchers:
+      - name: severity
+        value: warning
+      - name: type
+        value: security
+      groupWait: 30s
+      repeatInterval: 2h
+
+  receivers:
+  - name: security-critical
+    emailConfigs:
+    - to: security@cosmos-wfm.io
+      from: alertmanager@cosmos-wfm.io
+      smarthost: smtp.example.com:587
+      authUsername: ${SMTP_USERNAME}
+      authPassword: ${SMTP_PASSWORD}
+      sendResolved: true
+    pagerdutyConfigs:
+    - serviceKey: ${PAGERDUTY_SECURITY_KEY}
+      sendResolved: true
+      severity: critical
+      description: "Security Critical Alert: {{ .CommonAnnotations.description }}"
+
+  - name: critical-alerts
+    emailConfigs:
+    - to: oncall@cosmos-wfm.io
+      from: alertmanager@cosmos-wfm.io
+      smarthost: smtp.example.com:587
+      authUsername: ${SMTP_USERNAME}
+      authPassword: ${SMTP_PASSWORD}
+      sendResolved: true
+    pagerdutyConfigs:
+    - serviceKey: ${PAGERDUTY_KEY}
+      sendResolved: true
+      severity: critical
+      description: "Critical Alert: {{ .CommonAnnotations.description }}"
+
+  - name: security-warnings
+    emailConfigs:
+    - to: security-alerts@cosmos-wfm.io
+      from: alertmanager@cosmos-wfm.io
+      smarthost: smtp.example.com:587
+      authUsername: ${SMTP_USERNAME}
+      authPassword: ${SMTP_PASSWORD}
+      sendResolved: true
+    slackConfigs:
+    - apiURL: ${SLACK_WEBHOOK_URL}
+      channel: '#security-alerts'
+      sendResolved: true
+      title: "Security Warning: {{ .CommonAnnotations.summary }}"
+      text: "{{ .CommonAnnotations.description }}"
+
+  inhibitRules:
+  - sourceMatch:
+    - name: severity
+      value: critical
+    targetMatch:
+    - name: severity
+      value: warning
+    equal: ['alertname', 'cluster', 'service']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: cosmos-monitoring
+  labels:
+    app: alertmanager
+    component: monitoring
+spec:
+  ports:
+  - name: web
+    port: 9093
+    targetPort: web
+  selector:
+    app: alertmanager
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alertmanager-network-policy
+  namespace: cosmos-monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: alertmanager
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          component: monitoring
+    ports:
+    - protocol: TCP
+      port: 9093
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 169.254.0.0/16
+        - 172.16.0.0/12
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 587
