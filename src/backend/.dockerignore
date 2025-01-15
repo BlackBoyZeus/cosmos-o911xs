@@ -1,0 +1,44 @@
+node_modules
+dist
+coverage
+
+# Development and test files
+test
+.git
+README.md
+*.md
+docker-compose*.yml
+.dockerignore
+.gitignore
+
+# ML model artifacts
+model_checkpoints
+*.onnx
+*.pt
+*.pth
+
+# ML logging and profiling
+wandb
+tensorboard
+cuda_profiles
+*.nvvp
+*.nsys-rep
+
+# Data directories
+datasets
+raw_data
+processed_data
+cache
+
+# Security sensitive files
+secrets
+credentials
+.env
+.env.*
+**/*.key
+**/*.pem
+**/*.crt
+
+# Debug and log files
+*.log
+npm-debug.log*
