@@ -1,0 +1,64 @@
+# Kubernetes HPA configuration for Cosmos WFM Platform web interface
+# Version: autoscaling/v2
+# Purpose: Automatically scale web pods based on CPU and request metrics
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cosmos-web-hpa
+  namespace: cosmos
+  labels:
+    app.kubernetes.io/name: cosmos-web
+    app.kubernetes.io/part-of: cosmos-platform
+    app.kubernetes.io/component: frontend
+  annotations:
+    description: "HPA for Cosmos WFM Platform web interface"
+    scaling-policy: "Balanced scaling optimized for web traffic patterns"
+
+spec:
+  # Target the web deployment for scaling
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cosmos-web
+
+  # Scaling limits
+  minReplicas: 2  # Ensure minimum HA setup
+  maxReplicas: 10 # Maximum scale based on capacity planning
+
+  # Scaling metrics
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80  # Scale at 80% CPU utilization
+
+    # Custom metric for HTTP requests
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "1000"  # Target 1000 requests per pod
+
+  # Scaling behavior configuration
+  behavior:
+    # Scale up behavior
+    scaleUp:
+      stabilizationWindowSeconds: 60  # 1-minute window for scale-up decisions
+      policies:
+      - type: Pods
+        value: 2  # Add up to 2 pods at a time
+        periodSeconds: 60  # Check every minute
+
+    # Scale down behavior
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 5-minute window for scale-down decisions
+      policies:
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 120  # Check every 2 minutes
